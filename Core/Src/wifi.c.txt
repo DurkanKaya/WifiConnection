@@ -1,0 +1,146 @@
+/*
+ * WifiConnectDataParse.c
+ *
+ *  Created on: 3 Eyl 2021
+ *      Author: Ofis-Pc
+ */
+#include "WifiConnectDataParse.h"
+#include "main.h"
+#include "string.h"
+uint8_t Case = 0;
+uint8_t bufferdoldur[100];
+extern UART_HandleTypeDef huart2;
+char TxBuffer1[4]="AT\r\n";
+char TxBuffer2[12]="AT+CWMODE?\r\n";
+char TxBuffer3[13]="AT+CWMODE=1\r\n";
+char TxBuffer4[10]="AT+CIFSR\r\n";
+char TxBuffer5[13]="AT+CIPMUX=1\r\n";
+char TxBuffer6[21]="AT+CIPSERVER=1,3333\r\n";
+char TxBuffer7[39]="AT+CIPSTART=\"TCP\",\"192.168.1.74\",3333\r\n";
+char TxBuffer8[14]="AT+CIPSEND=4\r\n";
+char TxBuffer9[35]= "AT+CWJAP=\"Luhmann\",\"Luhmann2995@\"\r\n";
+char Tx[4] = "nk\r\n";
+//Buffer Clear
+void BufferReset1()
+{
+	uint8_t k=0;
+
+	for(k=0; k < 255; k++)
+	{
+		ESP_Gelen_Data[k] = 0;
+	}
+}
+//TCP Connected
+void DataConnectionControl()
+{
+	switch(Case){
+	case 0:
+		HAL_UART_Transmit(&huart2, (uint8_t*)TxBuffer1, 4, 100);
+		Case = 1;
+	case 1:
+		while (!(strstr(ESP_Gelen_Data,"OK")))
+		{
+			Case =0;
+		}
+		BufferReset1();
+
+	case 2:
+		HAL_UART_Transmit(&huart2, (uint8_t*)TxBuffer2,13, 100);
+		Case = 3;
+
+	case 3:
+		while(!(strstr(ESP_Gelen_Data,"OK")))
+		{
+			Case= 2;
+		}
+		BufferReset1();
+
+	case 4:
+		HAL_UART_Transmit(&huart2, (uint8_t*)TxBuffer3,13, 100);
+		BufferReset1();
+	case 5:
+		if(strstr(ESP_Gelen_Data,"OK"))
+		{
+			BufferReset1();
+			Case= 6;
+		}
+		else
+		{
+			Case = 4;
+			break;
+		}
+	case 6:
+		HAL_UART_Transmit(&huart2, (uint8_t*)TxBuffer9, 35, 100);
+		Case = 7;
+	case 7:
+		if(strstr(ESP_Gelen_Data,"OK"))
+		{
+			BufferReset1();
+			Case = 8;
+		}
+		else
+		{
+			BufferReset1();
+			Case = 6;
+			break;
+		}
+	case 8:
+		HAL_UART_Transmit(&huart2, (uint8_t*)TxBuffer4, 10, 100);
+		Case=9;
+
+	case 9:
+		if(strstr(ESP_Gelen_Data,"OK"))
+		{
+			BufferReset1();
+			Case =10;
+		}
+		else
+		{
+			BufferReset1();
+			Case=8;
+			break;
+		}
+	case 10:
+		HAL_UART_Transmit(&huart2, (uint8_t*)TxBuffer5, 13, 100);
+		Case =11;
+
+	case 11:
+		if(strstr(ESP_Gelen_Data,"OK"))
+		{
+			BufferReset1();
+			Case =12;
+		}
+		else
+		{
+			BufferReset1();
+			Case =10;
+			break;
+		}
+	case 12:
+		HAL_UART_Transmit(&huart2, (uint8_t*)TxBuffer6, 21,100);
+		Case =13;
+	case 13:
+		if(strstr(ESP_Gelen_Data,"OK"))
+		{
+			BufferReset1();
+
+			Case =14;
+		}
+		else
+		{
+			BufferReset1();
+			Case =12;
+			break;
+		}
+	case 14:
+		HAL_UART_Transmit(&huart2, (uint8_t*)TxBuffer7, 39,100);
+		Case = 15;
+
+	case 15:
+		HAL_UART_Transmit(&huart2, (uint8_t*)TxBuffer8, 14,100);
+		HAL_UART_Transmit(&huart2, (uint8_t*)Tx, 4,100);
+		BufferReset1();
+		Case = 14;
+		break;
+	}
+}
